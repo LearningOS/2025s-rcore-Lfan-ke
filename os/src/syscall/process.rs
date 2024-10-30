@@ -53,5 +53,15 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 /// YOUR JOB: Finish sys_task_info to pass testcases
 pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
     trace!("kernel: sys_task_info");
-    -1
+    use crate::task::TASK_MANAGER;
+    use crate::timer::get_time_ms;
+
+    let inner = TASK_MANAGER.inner.exclusive_access();
+    unsafe {
+        (*_ti).status = inner.tasks[inner.current_task].task_status;
+        (*_ti).syscall_times = inner.tasks[inner.current_task].syscall_times;
+        (*_ti).time = get_time_ms() - inner.tasks[inner.current_task].begin_time;
+    }
+    drop(inner);
+    0
 }
