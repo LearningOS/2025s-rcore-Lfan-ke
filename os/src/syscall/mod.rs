@@ -41,12 +41,21 @@ const SYSCALL_SPAWN: usize = 400;
 const SYSCALL_TASK_INFO: usize = 410;
 
 mod fs;
+mod util;
 mod process;
 
 use fs::*;
+use util::*;
 use process::*;
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+    use crate::task::current_task;
+    let curr_task = current_task().unwrap();
+    let mut inner = curr_task.get_inner();
+    let tlen = inner.syscall_times.len();
+    if syscall_id < tlen {
+        inner.syscall_times[syscall_id] += 1;
+    } drop(inner); drop(curr_task);
     match syscall_id {
         SYSCALL_READ => sys_read(args[0], args[1] as *const u8, args[2]),
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),

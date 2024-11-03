@@ -56,6 +56,7 @@ lazy_static! {
 ///get app data from name
 pub fn get_app_data_by_name(name: &str) -> Option<&'static [u8]> {
     let num_app = get_num_app();
+    println!("curr find app name: {}", name);
     (0..num_app)
         .find(|&i| APP_NAMES[i] == name)
         .map(get_app_data)
