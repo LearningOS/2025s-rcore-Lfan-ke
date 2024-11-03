@@ -36,7 +36,8 @@ lazy_static! {
 /// address space
 pub struct MemorySet {
     page_table: PageTable,
-    areas: Vec<MapArea>,
+    /// 123
+    pub areas: Vec<MapArea>,
 }
 
 impl MemorySet {
@@ -70,6 +71,41 @@ impl MemorySet {
         }
         self.areas.push(map_area);
     }
+   
+    /// 123
+    pub fn heke_malloc(&mut self, st: usize, len: usize, pt: usize) -> isize {
+        let perm: MapPermission = {
+            if ((pt >> 0) & 1) == 1 {MapPermission::R} else {MapPermission{bits:0}}
+        } | {
+            if ((pt >> 1) & 1) == 1 {MapPermission::W} else {MapPermission{bits:0}}
+        } | {
+            if ((pt >> 2) & 1) == 1 {MapPermission::X} else {MapPermission{bits:0}}
+        } | MapPermission::U;
+        self.insert_framed_area(VirtAddr(st), VirtAddr(st+len*4096), perm);
+        0
+    }
+    
+    /// 233
+    pub fn heke_delloc(&mut self, st: usize, len: usize) -> isize {
+        // 为了对应上面的alloc
+        // 因为是简单实现，不考虑交叉、截断区间的情况，所以先不管[st, len, ed]的情况
+        let mut idx =  0usize;
+        let mut res = -1;
+        let mut tmp: Option<&mut MapArea> = None;
+        for i in &mut self.areas {
+            //println!("parm: [{:x},{:x}), had: [{:x},{:x})", st, st+len, i.vpn_range.l.0, i.vpn_range.r.0);
+            if i.vpn_range.l == VirtAddr(st).into() && i.vpn_range.r == VirtAddr(st+len*4096).into() {
+                tmp = Some(i); res = 0; break;
+            }
+            idx += 1;
+        }
+        if let Some(_t) = tmp {
+            _t.unmap(&mut self.page_table);
+            self.areas.remove(idx);
+        }
+        res
+    }
+
     /// Mention that trampoline is not collected by areas.
     fn map_trampoline(&mut self) {
         self.page_table.map(
@@ -265,7 +301,7 @@ impl MemorySet {
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {
-    vpn_range: VPNRange,
+    pub vpn_range: VPNRange,
     data_frames: BTreeMap<VirtPageNum, FrameTracker>,
     map_type: MapType,
     map_perm: MapPermission,
