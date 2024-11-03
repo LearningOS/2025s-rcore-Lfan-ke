@@ -1,6 +1,6 @@
 //!Implementation of [`Processor`] and Intersection of control flow
 //!
-//! Here, the continuous operation of user apps in CPU is maintained,
+//! Here, the continuous :wqoperation of user apps in CPU is maintained,
 //! the current running state of CPU is recorded,
 //! and the replacement and transfer of control flow of different applications are executed.
 
@@ -61,6 +61,10 @@ pub fn run_tasks() {
             let mut task_inner = task.inner_exclusive_access();
             let next_task_cx_ptr = &task_inner.task_cx as *const TaskContext;
             task_inner.task_status = TaskStatus::Running;
+            if task_inner.begin_time == 0 {
+                use crate::timer::get_time_ms;
+                task_inner.begin_time = get_time_ms();
+            }
             // release coming task_inner manually
             drop(task_inner);
             // release coming task TCB manually

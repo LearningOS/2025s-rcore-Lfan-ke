@@ -1,8 +1,8 @@
 //! Types related to task management & Functions for completely changing TCB
 use super::TaskContext;
 use super::{kstack_alloc, pid_alloc, KernelStack, PidHandle};
-use crate::config::TRAP_CONTEXT_BASE;
 use crate::fs::{File, Stdin, Stdout};
+use crate::config::{TRAP_CONTEXT_BASE, MAX_SYSCALL_NUM};
 use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
 use crate::trap::{trap_handler, TrapContext};
@@ -35,6 +35,79 @@ impl TaskControlBlock {
     pub fn get_user_token(&self) -> usize {
         let inner = self.inner_exclusive_access();
         inner.memory_set.token()
+    }
+}
+
+/// heke函数
+impl TaskControlBlock {
+
+    /// 设置prio
+    pub fn set_priority(&self, p: isize) -> isize {
+        self.inner_exclusive_access().priority = p;
+        p
+    }
+
+    /// 检查[st, st+len)范围的vpn，如果TCB的MS包含任一vpn就返回true
+    pub fn contain_any(&self, start: usize, len: usize) -> bool {
+        let inner = self.inner_exclusive_access();
+        for j in &inner.memory_set.areas {
+            if (
+                start < j.vpn_range.l.to_va_usize() && start+len > j.vpn_range.l.to_va_usize()
+            ) || (  // start在表中间
+                start >= j.vpn_range.l.to_va_usize() && start < j.vpn_range.r.to_va_usize()
+            )       // start在前，end>=区间
+            {
+                return true;
+            }
+        } return false;
+    }
+
+    /// 检查是否包含整个[st, st+len)范围的vpn，但是实验要求简单实现，就直接==判断吧...恭敬不如从命
+    pub fn contain_all(&self, st: usize, len: usize) -> bool {
+        let inner = self.inner_exclusive_access();
+        for j in &inner.memory_set.areas {
+            if st+len == j.vpn_range.r.to_va_usize() && st == j.vpn_range.l.to_va_usize() {
+                return true;
+            }
+        } return false;
+    }
+
+    /// 注册页表和映射虚存
+    pub fn malloc(&self, st: usize, len: usize, pt: usize) -> isize {
+        use crate::mm::MapPermission;
+        let perm: MapPermission = {
+            if ((pt >> 0) & 1) == 1 {MapPermission::R} else {MapPermission::empty()}
+        } | {
+            if ((pt >> 1) & 1) == 1 {MapPermission::W} else {MapPermission::empty()}
+        } | {
+            if ((pt >> 2) & 1) == 1 {MapPermission::X} else {MapPermission::empty()}
+        } | MapPermission::U;
+        let mut inner = self.inner_exclusive_access();
+        inner.memory_set.insert_framed_area(VirtAddr(st), VirtAddr(st+len), perm);
+        0
+    }
+
+    /// 注销页表和虚存映射
+    pub fn delloc(&self, st: usize, len: usize) -> isize {
+        // 因为是简单实现，不考虑交叉、截断区间的情况，所以先不管[st, len, ed]的情况
+        use crate::mm::MapArea;
+        let mut idx =  0usize; let mut res = -1; let mut tmp: Option<&mut MapArea> = None;
+        let mut inner = self.inner_exclusive_access();
+        let ref mut memory_set = inner.memory_set;
+        for i in &mut memory_set.areas {
+            if (i.vpn_range.l == VirtAddr(st).into()) && (i.vpn_range.r == VirtAddr(st+len).into()) {
+                tmp = Some(i); res = 0; break;
+            } idx += 1;
+        }
+        if let Some(_t) = tmp {
+            _t.unmap(&mut memory_set.page_table);
+            memory_set.areas.remove(idx);
+        } return res;
+    }
+
+    /// 返回inner的mut
+    pub fn get_inner(&self) -> RefMut<TaskControlBlockInner> {
+        self.inner_exclusive_access()
     }
 }
 
@@ -71,6 +144,18 @@ pub struct TaskControlBlockInner {
 
     /// Program break
     pub program_brk: usize,
+
+    /// ch 3,4
+    pub begin_time: usize,
+
+    /// ch 3,4
+    pub syscall_times: [u32; MAX_SYSCALL_NUM],
+
+    /// ch 5
+    pub stride: usize,
+
+    /// ch 5
+    pub priority: isize,
 }
 
 impl TaskControlBlockInner {
@@ -80,7 +165,7 @@ impl TaskControlBlockInner {
     pub fn get_user_token(&self) -> usize {
         self.memory_set.token()
     }
-    fn get_status(&self) -> TaskStatus {
+    pub fn get_status(&self) -> TaskStatus {
         self.task_status
     }
     pub fn is_zombie(&self) -> bool {
@@ -135,6 +220,8 @@ impl TaskControlBlock {
                     ],
                     heap_bottom: user_sp,
                     program_brk: user_sp,
+                    begin_time: 0, stride: 0, priority: 2 ,
+                    syscall_times: [0u32; MAX_SYSCALL_NUM],
                 })
             },
         };
@@ -148,6 +235,16 @@ impl TaskControlBlock {
             trap_handler as usize,
         );
         task_control_block
+    }
+
+    /// heke
+    pub fn set_parent(&self, parent: Option<Weak<TaskControlBlock>>) {
+        self.inner_exclusive_access().parent = parent;
+    }
+
+    /// heke
+    pub fn get_status(&self) -> TaskStatus {
+        self.inner_exclusive_access().task_status
     }
 
     /// Load a new elf to replace the original application address space and start execution
@@ -216,6 +313,8 @@ impl TaskControlBlock {
                     fd_table: new_fd_table,
                     heap_bottom: parent_inner.heap_bottom,
                     program_brk: parent_inner.program_brk,
+                    begin_time: 0, stride: 0, priority: 2,
+                    syscall_times: [0;  MAX_SYSCALL_NUM ],
                 })
             },
         });

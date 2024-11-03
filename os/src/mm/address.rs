@@ -177,6 +177,13 @@ impl VirtPageNum {
     }
 }
 
+impl VirtPageNum {
+    /// heke
+    pub fn to_va_usize(self) -> usize {
+        (VirtAddr::from(self)).into()
+    }
+}
+
 impl PhysAddr {
     /// Get the immutable reference of physical address
     pub fn get_ref<T>(&self) -> &'static T {
@@ -227,8 +234,8 @@ pub struct SimpleRange<T>
 where
     T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
-    l: T,
-    r: T,
+    pub l: T,
+    pub r: T,
 }
 impl<T> SimpleRange<T>
 where

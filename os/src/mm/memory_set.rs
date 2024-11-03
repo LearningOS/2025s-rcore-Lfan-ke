@@ -38,8 +38,10 @@ pub fn kernel_token() -> usize {
 
 /// address space
 pub struct MemorySet {
-    page_table: PageTable,
-    areas: Vec<MapArea>,
+    /// 123
+    pub page_table: PageTable,
+    /// pr -> pub 233
+    pub areas: Vec<MapArea>,
 }
 
 impl MemorySet {
@@ -321,13 +323,18 @@ impl MemorySet {
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {
-    vpn_range: VPNRange,
-    data_frames: BTreeMap<VirtPageNum, FrameTracker>,
-    map_type: MapType,
-    map_perm: MapPermission,
+    /// 
+    pub vpn_range: VPNRange,
+    ///
+    pub data_frames: BTreeMap<VirtPageNum, FrameTracker>,
+    ///
+    pub map_type: MapType,
+    ///
+    pub map_perm: MapPermission,
 }
 
 impl MapArea {
+    ///
     pub fn new(
         start_va: VirtAddr,
         end_va: VirtAddr,
@@ -343,6 +350,7 @@ impl MapArea {
             map_perm,
         }
     }
+    ///
     pub fn from_another(another: &Self) -> Self {
         Self {
             vpn_range: VPNRange::new(another.vpn_range.get_start(), another.vpn_range.get_end()),
@@ -351,6 +359,7 @@ impl MapArea {
             map_perm: another.map_perm,
         }
     }
+    ///
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         let ppn: PhysPageNum;
         match self.map_type {
@@ -366,22 +375,26 @@ impl MapArea {
         let pte_flags = PTEFlags::from_bits(self.map_perm.bits).unwrap();
         page_table.map(vpn, ppn, pte_flags);
     }
+    ///
     pub fn unmap_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         if self.map_type == MapType::Framed {
             self.data_frames.remove(&vpn);
         }
         page_table.unmap(vpn);
     }
+    ///
     pub fn map(&mut self, page_table: &mut PageTable) {
         for vpn in self.vpn_range {
             self.map_one(page_table, vpn);
         }
     }
+    ///
     pub fn unmap(&mut self, page_table: &mut PageTable) {
         for vpn in self.vpn_range {
             self.unmap_one(page_table, vpn);
         }
     }
+    ///
     #[allow(unused)]
     pub fn shrink_to(&mut self, page_table: &mut PageTable, new_end: VirtPageNum) {
         for vpn in VPNRange::new(new_end, self.vpn_range.get_end()) {
@@ -389,6 +402,7 @@ impl MapArea {
         }
         self.vpn_range = VPNRange::new(self.vpn_range.get_start(), new_end);
     }
+    ///
     #[allow(unused)]
     pub fn append_to(&mut self, page_table: &mut PageTable, new_end: VirtPageNum) {
         for vpn in VPNRange::new(self.vpn_range.get_end(), new_end) {
