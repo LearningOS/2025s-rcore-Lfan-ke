@@ -157,10 +157,10 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
         "kernel:pid[{}] sys_mmap NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    if (_start % 4096)!=0 || (_port & !0x7)!=0 || (_port & 0x7)==0 {
+    if (_start%4096)!=0 || (_port&!0x7)!=0 || (_port&0x7)==0 {
         return -1;
     }
-    let len = ((if _len & ((1<<12)-1) == 0 {0} else {1}) + _len >> 12) << 12;
+    let len = ((if _len % 4096 == 0 {0} else {1}) + _len / 4096) * 4096;
     let curr_task = current_task().unwrap();
     if curr_task.contain_any(_start, len) {
         return -1;
@@ -175,7 +175,7 @@ pub fn sys_munmap(_start: usize, _len: usize) -> isize {
         current_task().unwrap().pid.0
     );
     if (_start % 4096) != 0 { return -1; }
-    let len = ((if _len & ((1<<12)-1) == 0 {0} else {1}) + _len >> 12) << 12;
+    let len = ((if _len % 4096 == 0 {0} else {1}) + _len / 4096) * 4096;
     let curr_task = current_task().unwrap();
     if !curr_task.contain_all(_start, len) {
         return -1;
@@ -208,6 +208,7 @@ pub fn sys_spawn(_path: *const u8) -> isize {
             app
         ));
         new_task.set_parent(Some(Arc::downgrade(&current_task)));
+        current_task.get_inner().children.push(new_task.clone());
         let new_pid = new_task.pid.0;
         let trap_cx = new_task.inner_exclusive_access().get_trap_cx();
         trap_cx.x[10] = 0;
@@ -222,5 +223,7 @@ pub fn sys_set_priority(_prio: isize) -> isize {
         "kernel:pid[{}] sys_set_priority NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    current_task().unwrap().set_priority(_prio)
+    if _prio <= 1 { return -1; }
+    let tmp = current_task().unwrap();
+    tmp.set_priority(_prio)
 }

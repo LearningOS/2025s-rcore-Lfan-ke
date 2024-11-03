@@ -55,6 +55,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     let tlen = inner.syscall_times.len();
     if syscall_id < tlen {
         inner.syscall_times[syscall_id] += 1;
+        //println!("{:?}", inner.syscall_times);
     } drop(inner); drop(curr_task);
     match syscall_id {
         SYSCALL_READ => sys_read(args[0], args[1] as *const u8, args[2]),

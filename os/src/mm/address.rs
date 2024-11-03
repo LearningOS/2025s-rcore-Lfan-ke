@@ -168,6 +168,13 @@ impl VirtPageNum {
     }
 }
 
+impl VirtPageNum {
+    /// heke
+    pub fn to_va_usize(self) -> usize {
+        (VirtAddr::from(self)).into()
+    }
+}
+
 impl PhysAddr {
     ///Get mutable reference to `PhysAddr` value
     /// Get the mutable reference of physical address

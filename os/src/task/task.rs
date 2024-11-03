@@ -49,8 +49,11 @@ impl TaskControlBlock {
     pub fn contain_any(&self, start: usize, len: usize) -> bool {
         let inner = self.inner_exclusive_access();
         for j in &inner.memory_set.areas {
-            if (start < j.vpn_range.l.0 && start + len > j.vpn_range.l.0) || // start在表中间
-               (start >= j.vpn_range.l.0 && start < j.vpn_range.r.0)         // start在前，end>=区间
+            if (
+                start < j.vpn_range.l.to_va_usize() && start+len > j.vpn_range.l.to_va_usize()
+            ) || (  // start在表中间
+                start >= j.vpn_range.l.to_va_usize() && start < j.vpn_range.r.to_va_usize()
+            )       // start在前，end>=区间
             {
                 return true;
             }
@@ -61,7 +64,7 @@ impl TaskControlBlock {
     pub fn contain_all(&self, st: usize, len: usize) -> bool {
         let inner = self.inner_exclusive_access();
         for j in &inner.memory_set.areas {
-            if st+len == j.vpn_range.r.0 && st == j.vpn_range.l.0 {
+            if st+len == j.vpn_range.r.to_va_usize() && st == j.vpn_range.l.to_va_usize() {
                 return true;
             }
         } return false;
@@ -90,7 +93,7 @@ impl TaskControlBlock {
         let mut inner = self.inner_exclusive_access();
         let ref mut memory_set = inner.memory_set;
         for i in &mut memory_set.areas {
-            if i.vpn_range.l == VirtAddr(st).into() && i.vpn_range.r == VirtAddr(st+len).into() {
+            if (i.vpn_range.l == VirtAddr(st).into()) && (i.vpn_range.r == VirtAddr(st+len).into()) {
                 tmp = Some(i); res = 0; break;
             } idx += 1;
         }
