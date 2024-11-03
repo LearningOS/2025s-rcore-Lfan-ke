@@ -200,12 +200,14 @@ pub fn sys_spawn(_path: *const u8) -> isize {
         "kernel:pid[{}] sys_spawn NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    let task_name = translated_str(current_user_token(), _path);
     let current_task = current_task().unwrap();
-    if let Some(app) = get_app_data_by_name(&task_name) {
+    let token = current_user_token();
+    let path = translated_str(token, _path);
+    if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
+        let app = app_inode.read_all();
         use crate::task::TaskControlBlock;
         let new_task = Arc::new(TaskControlBlock::new(
-            app
+            app.as_slice()
         ));
         new_task.set_parent(Some(Arc::downgrade(&current_task)));
         current_task.get_inner().children.push(new_task.clone());
