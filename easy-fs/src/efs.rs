@@ -130,6 +130,12 @@ impl EasyFileSystem {
         self.inode_bitmap.alloc(&self.block_device).unwrap() as u32
     }
 
+    /// 补上这方法
+    pub fn dealloc_inode(&mut self, inode_id: usize) {
+        // 采用脏位，只抹去bitmap的值！
+        self.inode_bitmap.dealloc(&self.block_device, inode_id)
+    }
+
     /// Allocate a data block
     pub fn alloc_data(&mut self) -> u32 {
         self.data_bitmap.alloc(&self.block_device).unwrap() as u32 + self.data_area_start_block

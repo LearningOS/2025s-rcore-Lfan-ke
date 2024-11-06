@@ -1,11 +1,12 @@
 use super::{
     block_cache_sync_all, get_block_cache, BlockDevice, DirEntry, DiskInode, DiskInodeType,
-    EasyFileSystem, DIRENT_SZ,
+    EasyFileSystem, DIRENT_SZ, BLOCK_SZ,
 };
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::{Mutex, MutexGuard};
+use core::mem::size_of;
 /// Virtual filesystem layer over easy-fs
 pub struct Inode {
     block_id: usize,
@@ -30,19 +31,19 @@ impl Inode {
         }
     }
     /// Call a function over a disk inode to read it
-    fn read_disk_inode<V>(&self, f: impl FnOnce(&DiskInode) -> V) -> V {
+    pub fn read_disk_inode<V>(&self, f: impl FnOnce(&DiskInode) -> V) -> V {
         get_block_cache(self.block_id, Arc::clone(&self.block_device))
             .lock()
             .read(self.block_offset, f)
     }
     /// Call a function over a disk inode to modify it
-    fn modify_disk_inode<V>(&self, f: impl FnOnce(&mut DiskInode) -> V) -> V {
+    pub fn modify_disk_inode<V>(&self, f: impl FnOnce(&mut DiskInode) -> V) -> V {
         get_block_cache(self.block_id, Arc::clone(&self.block_device))
             .lock()
             .modify(self.block_offset, f)
     }
     /// Find inode under a disk inode by name
-    fn find_inode_id(&self, name: &str, disk_inode: &DiskInode) -> Option<u32> {
+    pub fn find_inode_id(&self, name: &str, disk_inode: &DiskInode) -> Option<u32> {
         // assert it is a directory
         assert!(disk_inode.is_dir());
         let file_count = (disk_inode.size as usize) / DIRENT_SZ;
@@ -182,5 +183,98 @@ impl Inode {
             }
         });
         block_cache_sync_all();
+    }
+}
+
+impl Inode {
+    /// heke - link inode_id to name 并插入目录项，如果存在同名的返回-1
+    pub fn push_dirent(&self, name: &str, dsinode_number: u32) -> i32 {
+        self.read_disk_inode(|disk_inode| {
+            assert!(disk_inode.is_dir());
+            if let Some(_) = self.find(name) {
+                return -1;
+            }
+            let curr_size = disk_inode.size;
+            let dirent = DirEntry::new(name, dsinode_number);
+            self.write_at(curr_size as usize, dirent.as_bytes());
+            let finded = self.find(name).unwrap();
+            let curr_link = finded.get_nlink();
+            finded.set_nlink(curr_link+1);
+            return 0;
+        })
+    }
+
+    /// 硬链接数
+    pub fn get_nlink(&self) -> u32 {
+        self.read_disk_inode(|disk_inode| {disk_inode.nlink})
+    }
+
+    /// 修改硬链接数
+    pub fn set_nlink(&self, n: u32) -> u32 {
+        self.modify_disk_inode(|disk_inode| {
+            disk_inode.nlink = n;
+            disk_inode.nlink
+        })
+    }
+
+    /// 删除目录项，找不到返回-1
+    pub fn remove_dirent(&self, name: &str) -> i32 {
+        self.read_disk_inode(|disk_inode| {
+            assert!(disk_inode.is_dir());
+            let finded = self.find(name);
+            if finded.is_none() {
+                return -1;
+            }
+            let find_node = finded.unwrap();
+            let curr_size = disk_inode.size as usize;
+            let file_count = curr_size / DIRENT_SZ;
+            let mut tmpvec = Vec::new();
+            for i in 0..file_count {
+                let mut dirent = DirEntry::empty();
+                assert_eq!(
+                    disk_inode.read_at(
+                        DIRENT_SZ * i,
+                        dirent.as_bytes_mut(),
+                        &self.block_device,
+                    ),
+                    DIRENT_SZ,
+                );
+                if dirent.name() == name {
+                    continue
+                } else {
+                    let mut tmpbuf = [0u8; size_of::<DirEntry>()];
+                    tmpbuf.copy_from_slice(dirent.as_bytes());
+                    tmpvec.push(tmpbuf);
+                }
+            }
+            let curr_link = find_node.get_nlink();
+            if curr_link == 1 {
+                let mut fs = self.fs.lock();
+                let inode_id = find_node.get_inode_id();
+                fs.dealloc_inode(inode_id);
+            } else {
+                find_node.set_nlink(curr_link-1);
+            }
+            self.clear();
+            for i in 0..tmpvec.len() {
+                self.write_at((i as usize)*size_of::<DirEntry>(), &tmpvec[i]);
+            }
+            0
+        })
+    }
+
+    /// 233
+    pub fn get_inode_id(&self) -> usize {
+        self.block_id * (BLOCK_SZ / size_of::<DiskInode>()) + self.block_offset / size_of::<DiskInode>()
+    }
+
+    ///
+    pub fn is_file(&self) -> bool {
+        self.read_disk_inode(|disk_inode| disk_inode.is_file())
+    }
+
+    ///
+    pub fn is_dir (&self) -> bool {
+        self.read_disk_inode(|disk_inode| disk_inode.is_dir ())
     }
 }

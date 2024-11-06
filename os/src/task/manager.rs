@@ -26,9 +26,9 @@ impl TaskManager {
     }
     /// Take a process out of the ready queue
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
-        // self.ready_queue.pop_front()
+        self.ready_queue.pop_front()
         // 说好的简单起见昂！
-        let mut res = self.ready_queue.pop_front();
+        /*let mut res = self.ready_queue.pop_front();
         let mut len = self.ready_queue.len();
         if     res.is_none() { return res; }
         if     len == 0      { return res; }
@@ -49,7 +49,7 @@ impl TaskManager {
         let priority = resinner.priority as usize;
         resinner.stride +=  BIG_STRIDE / priority;
         drop(resinner);
-        return Some(resunwrp);
+        return Some(resunwrp);*/
     }
 }
 
