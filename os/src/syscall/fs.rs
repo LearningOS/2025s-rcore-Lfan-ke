@@ -87,7 +87,7 @@ pub fn sys_fstat(_fd: usize, _st: *mut Stat) -> isize {
         "kernel:pid[{}] sys_fstat NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    /*let task = current_task().unwrap();
+    let task = current_task().unwrap();
     let inner = task.inner_exclusive_access();
     use crate::fs::StatMode;
     if  _fd >= inner.fd_table.len() || _fd < 3 { return -1; }
@@ -104,7 +104,7 @@ pub fn sys_fstat(_fd: usize, _st: *mut Stat) -> isize {
         return wirte_struct_to_vbuf(tmp, _st);
     } else {
         return -1;
-    }*/-1
+    }
 }
 
 /// YOUR JOB: Implement linkat.
@@ -113,7 +113,7 @@ pub fn sys_linkat(_old_name: *const u8, _new_name: *const u8) -> isize {
         "kernel:pid[{}] sys_linkat NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    /*let token = current_user_token();
+    let token = current_user_token();
     let old_name = translated_str(token, _old_name);
     let new_name = translated_str(token, _new_name);
     ROOT_INODE.read_disk_inode(|disc_inode| {
@@ -122,7 +122,7 @@ pub fn sys_linkat(_old_name: *const u8, _new_name: *const u8) -> isize {
         } else {
             return -1;
         }
-    })*/-1
+    })
 }
 
 /// YOUR JOB: Implement unlinkat.
@@ -131,7 +131,7 @@ pub fn sys_unlinkat(_name: *const u8) -> isize {
         "kernel:pid[{}] sys_unlinkat NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    /*let token = current_user_token();
+    let token = current_user_token();
     let name = translated_str(token, _name);
-    return ROOT_INODE.remove_dirent(&name) as isize;*/-1
+    return ROOT_INODE.remove_dirent(&name) as isize;
 }

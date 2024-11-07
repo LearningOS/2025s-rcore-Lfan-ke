@@ -54,6 +54,22 @@ impl OSInode {
     }
 }
 
+/// heke
+impl OSInode {
+    /// seek
+    pub fn get_seek(&self) -> usize {
+        let inner = self.inner.exclusive_access();
+        inner.offset
+    }
+
+    /// set seek
+    pub fn set_seek(&self, seek: usize) -> usize {
+        let mut inner = self.inner.exclusive_access();
+        inner.offset = seek;
+        inner.offset
+    }
+}
+
 lazy_static! {
     /// 123
     pub static ref ROOT_INODE: Arc<Inode> = {

@@ -16,5 +16,8 @@ tools/
 pushall.sh
 *.bak
 
+# 不保存vim以及NERDTreeToggle的中间临时文件
+*.swp.*
+
 user/
 ci-user/
