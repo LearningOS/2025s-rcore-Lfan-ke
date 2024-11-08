@@ -101,6 +101,7 @@ pub fn sys_fstat(_fd: usize, _st: *mut Stat) -> isize {
             nlink   :   _file.get_nlink(),
             pad     :   [0; 7],
         };
+        drop(inner);         // 避免MutRefErr
         return wirte_struct_to_vbuf(tmp, _st);
     } else {
         return -1;
@@ -116,13 +117,12 @@ pub fn sys_linkat(_old_name: *const u8, _new_name: *const u8) -> isize {
     let token = current_user_token();
     let old_name = translated_str(token, _old_name);
     let new_name = translated_str(token, _new_name);
-    ROOT_INODE.read_disk_inode(|disc_inode| {
-        if let Some(inode_id) = ROOT_INODE.find_inode_id(&old_name, disc_inode) {
-            return ROOT_INODE.push_dirent(&new_name, inode_id) as isize;
-        } else {
-            return -1;
-        }
-    })
+    let nid = ROOT_INODE.read_disk_inode(|dn| {ROOT_INODE.find_inode_id(&new_name, dn)});
+    if nid.is_some() { return -1; }
+    let oid = ROOT_INODE.read_disk_inode(|dn| {ROOT_INODE.find_inode_id(&old_name, dn)});
+    if oid.is_none() { return -1; }
+    // println!("{} debug: line: [{}] - colu: [{}] ok", file!(), line!(), column!());
+    return ROOT_INODE.push_dirent(&new_name, oid.unwrap()) as isize;
 }
 
 /// YOUR JOB: Implement unlinkat.
@@ -133,5 +133,8 @@ pub fn sys_unlinkat(_name: *const u8) -> isize {
     );
     let token = current_user_token();
     let name = translated_str(token, _name);
+    let oid = ROOT_INODE.read_disk_inode(|dn| {ROOT_INODE.find_inode_id(&name, dn)});
+    if oid.is_none() { return -1; }
+    println!("{} debug: line: [{}] - colu: [{}] ok", file!(), line!(), column!());
     return ROOT_INODE.remove_dirent(&name) as isize;
 }

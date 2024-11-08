@@ -3,6 +3,9 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter, Result};
 
+#[allow(unused)]
+use core::mem::size_of;
+
 /// Magic number for sanity check
 const EFS_MAGIC: u32 = 0x3b800001;
 /// The max number of direct inodes
@@ -432,6 +435,12 @@ impl DirEntry {
     }
     /// Get inode number of the entry
     pub fn inode_id(&self) -> u32 {
+        self.inode_id
+    }
+
+    #[allow(unused)]
+    /// heke
+    pub fn get_inode_id(&self) -> u32 {
         self.inode_id
     }
 }

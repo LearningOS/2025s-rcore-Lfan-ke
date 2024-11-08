@@ -211,46 +211,6 @@ pub fn sys_spawn(_path: *const u8) -> isize {
         add_task(new_task);
         return new_pid as isize;
     } else { return -1; }
-    /*if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
-        //println!("os/src/syscall/process.rs::----------{}   seek: {}", path, app_inode.get_seek());
-        /*println!(
-            "inode_id: {} d:{} f:{} nlink: {};;;",
-            app_inode.get_inode_id(), app_inode.is_dir(), app_inode.is_file(), app_inode.get_nlink()
-        );*/
-        app_inode.set_seek(0);
-        let app = app_inode.read_all();
-        //println!("os/src/syscall/process.rs::----------{}   --------read_all, size: {}", path, app.len());
-        use crate::task::TaskControlBlock;
-        let new_task = Arc::new(TaskControlBlock::new_except_tb(
-            app.as_slice()
-        ));
-        //println!("os/src/syscall/process.rs::----------{}   --------sliced ., size: {}", path, app.len());
-        for fd_idx in 0..3 {
-            let fd = current_task.get_inner().fd_table[fd_idx].clone();
-            if let Some(file) = fd {
-                new_task.get_inner().fd_table.push(Some(file.clone()));
-            } else {
-                new_task.get_inner().fd_table.push(None);
-            }
-        }
-        // fd全复制的情况：
-        /*let fd_tb_len = current_task.get_inner().fd_table.len();
-        for fd_idx in 0..fd_tb_len {
-            let fd = current_task.get_inner().fd_table[fd_idx].clone();
-            if let Some(file) = fd {
-                new_task.get_inner().fd_table.push(Some(file.clone()));
-            } else {
-                new_task.get_inner().fd_table.push(None);
-            }
-        }*/
-        new_task.set_parent(Some(Arc::downgrade(&current_task)));
-        current_task.get_inner().children.push(new_task.clone());
-        let new_pid = new_task.pid.0;
-        let trap_cx = new_task.inner_exclusive_access().get_trap_cx();
-        trap_cx.x[10] = 0;
-        add_task(new_task);
-        return new_pid as isize;
-    } else {return -1;}*/
 }
 
 // YOUR JOB: Set task priority.
