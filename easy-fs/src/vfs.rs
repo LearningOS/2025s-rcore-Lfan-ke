@@ -7,6 +7,11 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::{Mutex, MutexGuard};
 
+#[allow(empty)]
+use core::mem::size_of;
+#[allow(empty)]
+use crate::BLOCK_SZ;
+
 pub struct Inode {
     block_id: usize,
     block_offset: usize,

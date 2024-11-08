@@ -8,7 +8,7 @@ use core::mem::size_of;
 
 /// Magic number for sanity check
 const EFS_MAGIC: u32 = 0x3b800001;
-const INODE_DIRECT_COUNT: usize = 28;
+const INODE_DIRECT_COUNT: usize = 28-1;
 const NAME_LENGTH_LIMIT: usize = 27;
 const INODE_INDIRECT1_COUNT: usize = BLOCK_SZ / 4;
 const INODE_INDIRECT2_COUNT: usize = INODE_INDIRECT1_COUNT * INODE_INDIRECT1_COUNT;
@@ -78,6 +78,7 @@ pub struct DiskInode {
     pub indirect1: u32,
     pub indirect2: u32,
     type_: DiskInodeType,
+    pub nlink: u32,
 }
 
 impl DiskInode {

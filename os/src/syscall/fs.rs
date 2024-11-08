@@ -4,6 +4,8 @@ use crate::mm::{translated_byte_buffer, translated_refmut, translated_str, UserB
 use crate::task::{current_task, current_user_token};
 use alloc::sync::Arc;
 
+use crate::fs::ROOT_INODE;
+
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     trace!("kernel:pid[{}] sys_write", current_task().unwrap().pid.0);
     let token = current_user_token();
