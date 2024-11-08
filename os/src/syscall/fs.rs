@@ -109,17 +109,54 @@ pub fn sys_dup(fd: usize) -> isize {
 /// YOUR JOB: Implement fstat.
 pub fn sys_fstat(_fd: usize, _st: *mut Stat) -> isize {
     trace!("kernel:pid[{}] sys_fstat NOT IMPLEMENTED", current_task().unwrap().pid.0);
-    -1
+    let task = current_task().unwrap();
+    let inner = task.inner_exclusive_access();
+    use crate::fs::StatMode;
+    if  _fd >= inner.fd_table.len() || _fd < 3 { return -1; }
+    if let Some(file) = &inner.fd_table[_fd] {
+        use crate::fs::OSInode;
+        let _file = unsafe {&*(AsRef::as_ref(file) as *const _ as *const OSInode)};
+        let tmp = Stat {
+            dev     :   0,
+            ino     :   _file.get_inode_id(),
+            mode    :   if _file.is_dir() {StatMode::DIR} else {StatMode::FILE},
+            nlink   :   _file.get_nlink(),
+            pad     :   [0; 7],
+        };
+        drop(inner);         // 避免MutRefErr
+        return wirte_struct_to_vbuf(tmp, _st);
+    } else {
+        return -1;
+    }
 }
 
 /// YOUR JOB: Implement linkat.
 pub fn sys_linkat(_old_name: *const u8, _new_name: *const u8) -> isize {
-    trace!("kernel:pid[{}] sys_linkat NOT IMPLEMENTED", current_task().unwrap().pid.0);
-    -1
+    trace!(
+        "kernel:pid[{}] sys_linkat NOT IMPLEMENTED",
+        current_task().unwrap().pid.0
+    );
+    let token = current_user_token();
+    let old_name = translated_str(token, _old_name);
+    let new_name = translated_str(token, _new_name);
+    let nid = ROOT_INODE.read_disk_inode(|dn| {ROOT_INODE.find_inode_id(&new_name, dn)});
+    if nid.is_some() { return -1; }
+    let oid = ROOT_INODE.read_disk_inode(|dn| {ROOT_INODE.find_inode_id(&old_name, dn)});
+    if oid.is_none() { return -1; }
+    // println!("{} debug: line: [{}] - colu: [{}] ok", file!(), line!(), column!());
+    return ROOT_INODE.push_dirent(&new_name, oid.unwrap()) as isize;
 }
 
 /// YOUR JOB: Implement unlinkat.
 pub fn sys_unlinkat(_name: *const u8) -> isize {
-    trace!("kernel:pid[{}] sys_unlinkat NOT IMPLEMENTED", current_task().unwrap().pid.0);
-    -1
+    trace!(
+        "kernel:pid[{}] sys_unlinkat NOT IMPLEMENTED",
+        current_task().unwrap().pid.0
+    );
+    let token = current_user_token();
+    let name = translated_str(token, _name);
+    let oid = ROOT_INODE.read_disk_inode(|dn| {ROOT_INODE.find_inode_id(&name, dn)});
+    if oid.is_none() { return -1; }
+    println!("{} debug: line: [{}] - colu: [{}] ok", file!(), line!(), column!());
+    return ROOT_INODE.remove_dirent(&name) as isize;
 }
