@@ -7,6 +7,9 @@ use crate::{mm::PhysPageNum, sync::UPSafeCell};
 use alloc::sync::{Arc, Weak};
 use core::cell::RefMut;
 
+#[allow(unused)]
+use alloc::collections::BTreeMap;
+
 /// Task control block structure
 pub struct TaskControlBlock {
     /// immutable
@@ -41,6 +44,9 @@ pub struct TaskControlBlockInner {
     pub task_status: TaskStatus,
     /// It is set when active exit or execution error occurs
     pub exit_code: Option<i32>,
+    
+    /// 检测死锁而加的sid: source_num
+    pub semap_map: BTreeMap<usize, usize>,
 }
 
 impl TaskControlBlockInner {
@@ -75,12 +81,15 @@ impl TaskControlBlock {
                     task_cx: TaskContext::goto_trap_return(kstack_top),
                     task_status: TaskStatus::Ready,
                     exit_code: None,
+                    semap_map: BTreeMap::new(),
                 })
             },
         }
     }
 }
-
+/*
+    /// heke 一切为了死锁，干碎联盟，lok'tar oooooooogaaaar！
+*/
 #[derive(Copy, Clone, PartialEq)]
 /// The execution status of the current process
 pub enum TaskStatus {

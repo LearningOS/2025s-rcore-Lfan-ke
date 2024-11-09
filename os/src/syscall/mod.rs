@@ -102,14 +102,16 @@ pub const SYSCALL_CONDVAR_SIGNAL: usize = 472;
 pub const SYSCALL_CONDVAR_WAIT: usize = 473;
 
 mod fs;
-mod process;
 mod sync;
+mod util;
+mod process;
 mod thread;
 
 use fs::*;
-use process::*;
 use sync::*;
+use util::*;
 use thread::*;
+use process::*;
 
 use crate::fs::Stat;
 

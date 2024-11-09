@@ -15,6 +15,12 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefMut;
 
+#[allow(unused)]
+use alloc::collections::{BTreeSet, BTreeMap};
+
+/// 默认死锁检测为关闭：
+const HEKE_DEFAULT_EDD: bool = false;
+
 /// Process Control Block
 pub struct ProcessControlBlock {
     /// immutable
@@ -49,6 +55,17 @@ pub struct ProcessControlBlockInner {
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     /// condvar list
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+    /// 增加是否启用死锁检测
+    pub enable_deadlock_detect: bool,
+    /// 增加mutex的死锁检测
+    pub mutex_set: BTreeSet<usize>,
+    /// 增加semap的死锁检测
+    /// 这里用于记录可用总数，即：Available
+    /// 每次分配就将sem_id: total更改，creat的时候就将sem_id写入/覆盖
+    /// 每次up/down的时候就变化，TCB里对应的也是
+    /// TCB回收就会把信号量回加这里
+    /// 同时系统调用的create每次也会检测是否某个是None，以便于覆盖/push，所以这里就不用担心没了但是没删，就当脏位
+    pub semap_map: BTreeMap<usize, usize>,
 }
 
 impl ProcessControlBlockInner {
@@ -119,6 +136,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    enable_deadlock_detect: HEKE_DEFAULT_EDD,
+                    mutex_set: BTreeSet::new(),
+                    semap_map: BTreeMap::new(),
                 })
             },
         });
@@ -245,6 +265,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    enable_deadlock_detect: HEKE_DEFAULT_EDD,
+                    mutex_set: BTreeSet::new(),
+                    semap_map: BTreeMap::new(),
                 })
             },
         });
