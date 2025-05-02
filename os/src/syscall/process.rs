@@ -50,7 +50,7 @@ pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
             0
         }
         2 => {
-            crate::task::TASK_MANAGER.current_task().syscall_times[_id] as isize
+            crate::task::TASK_MANAGER.get_current_task_syscall_time(_id) as isize
         }
         _ => {
                 trace!("..."); -1

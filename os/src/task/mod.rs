@@ -138,9 +138,17 @@ impl TaskManager {
     }
 
     /// ...
-    pub fn current_task(&self) -> TaskControlBlock {
+    pub fn inc_of_curr_task_syscall(&self, syscall_id: usize) {
+        let mut inner = self.inner.exclusive_access();
+        let curr = inner.current_task;
+        inner.tasks[curr].syscall_times[syscall_id] += 1;
+    }
+
+    /// get syscall time of current task
+    pub fn get_current_task_syscall_time(&self, syscall_id: usize) -> u32 {
         let inner = self.inner.exclusive_access();
-        inner.tasks[inner.current_task]
+        let curr = inner.current_task;
+        inner.tasks[curr].syscall_times[syscall_id]
     }
 }
 

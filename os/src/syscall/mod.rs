@@ -30,9 +30,8 @@ use process::*;
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 
-    let mut curr = crate::task::TASK_MANAGER.current_task();
     if syscall_id < crate::config::MAX_SYSCALL_NUM {
-        curr.syscall_times[syscall_id] += 1;
+        crate::task::TASK_MANAGER.inc_of_curr_task_syscall(syscall_id);
     }
 
     match syscall_id {
