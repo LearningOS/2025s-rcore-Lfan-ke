@@ -137,6 +137,7 @@ impl TaskManager {
         }
     }
 
+    /// ...
     pub fn current_task(&self) -> TaskControlBlock {
         let inner = self.inner.exclusive_access();
         inner.tasks[inner.current_task]
