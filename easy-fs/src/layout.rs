@@ -3,10 +3,13 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter, Result};
 
+#[allow(unused)]
+ use core::mem::size_of;
+
 /// Magic number for sanity check
 const EFS_MAGIC: u32 = 0x3b800001;
 /// The max number of direct inodes
-const INODE_DIRECT_COUNT: usize = 28;
+const INODE_DIRECT_COUNT: usize = 28-1;
 /// The max length of inode name
 const NAME_LENGTH_LIMIT: usize = 27;
 /// The max number of indirect1 inodes
@@ -81,10 +84,16 @@ type DataBlock = [u8; BLOCK_SZ];
 /// A disk inode
 #[repr(C)]
 pub struct DiskInode {
+    ///
     pub size: u32,
+    ///
     pub direct: [u32; INODE_DIRECT_COUNT],
-    pub indirect1: u32,
-    pub indirect2: u32,
+        /// heke：硬链接数量
+     pub nlink: u32,
+    ///
+     pub indirect1: u32,
+    ///
+     pub indirect2: u32,
     type_: DiskInodeType,
 }
 
@@ -97,6 +106,7 @@ impl DiskInode {
         self.indirect1 = 0;
         self.indirect2 = 0;
         self.type_ = type_;
+        self.nlink = 1;
     }
     /// Whether this inode is a directory
     pub fn is_dir(&self) -> bool {
@@ -431,4 +441,11 @@ impl DirEntry {
     pub fn inode_id(&self) -> u32 {
         self.inode_id
     }
+
+
+     #[allow(unused)]
+     /// heke
+     pub fn get_inode_id(&self) -> u32 {
+         self.inode_id
+     }
 }

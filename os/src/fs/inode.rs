@@ -56,6 +56,7 @@ impl OSInode {
 }
 
 lazy_static! {
+    /// 123
     pub static ref ROOT_INODE: Arc<Inode> = {
         let efs = EasyFileSystem::open(BLOCK_DEVICE.clone());
         Arc::new(EasyFileSystem::root_inode(&efs))
@@ -124,6 +125,50 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
         })
     }
 }
+
+
+ impl OSInode {
+     /// heke
+     pub fn get_inode_id(&self) -> u64 {
+         let inner = self.inner.exclusive_access();
+         inner.inode.get_inode_id() as u64
+     }
+
+     /// heke
+     pub fn is_dir(&self) -> bool {
+         let inner = self.inner.exclusive_access();
+         inner.inode.is_dir()
+     }
+
+     /// heke
+     pub fn is_file(&self) -> bool {
+         let inner = self.inner.exclusive_access();
+         inner.inode.is_file()
+     }
+
+     /// heke
+     pub fn get_nlink(&self) -> u32 {
+         let inner = self.inner.exclusive_access();
+         inner.inode.get_nlink()
+     }
+ }
+
+ /// heke
+ impl OSInode {
+     /// seek
+     pub fn get_seek(&self) -> usize {
+         let inner = self.inner.exclusive_access();
+         inner.offset
+     }
+
+     /// set seek
+     pub fn set_seek(&self, seek: usize) -> usize {
+         let mut inner = self.inner.exclusive_access();
+         inner.offset = seek;
+         inner.offset
+     }
+ }
+
 
 impl File for OSInode {
     fn readable(&self) -> bool {
