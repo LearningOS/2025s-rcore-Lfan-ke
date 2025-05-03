@@ -168,6 +168,13 @@ impl VirtPageNum {
     }
 }
 
+impl VirtPageNum {
+    /// wx:heke1228
+    pub fn to_va_usize(self) -> usize {
+        (VirtAddr::from(self)).into()
+    }
+}
+
 impl PhysAddr {
     ///Get mutable reference to `PhysAddr` value
     /// Get the mutable reference of physical address
@@ -210,8 +217,10 @@ pub struct SimpleRange<T>
 where
     T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
-    l: T,
-    r: T,
+    /// *sad*
+    pub l: T,
+    /// *asd*
+    pub r: T,
 }
 impl<T> SimpleRange<T>
 where
