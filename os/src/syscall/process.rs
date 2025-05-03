@@ -58,44 +58,31 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
 pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
     trace!("kernel: sys_trace");
     use crate::mm::*;
+    let src = _id as *const u8 as usize;
     match _trace_request {
         0 => {
-            let src = _id as *const u8;
             let ptb = PageTable::from_token(crate::task::current_user_token());
-            let sva = VirtAddr::from(src as usize);
+            let sva = VirtAddr::from(src);
             let vpn = sva.floor();
             match ptb.translate(vpn) {
                 Some(pte) if pte.is_valid() && pte.is_u_mode() && pte.readable() => pte,
                 _ => return -1isize,
             };
-            // let ppn = ptb.translate(vpn).unwrap().ppn();
-            // ppn.get_bytes_array()[sva.page_offset()] as isize
-            translated_byte_buffer(
-                crate::task::current_user_token(),
-                src,
-                core::mem::size_of::<u8>(),
-            )[0][0] as isize
+            let ppn = ptb.translate(vpn).unwrap().ppn();
+            ppn.get_bytes_array()[sva.page_offset()..sva.page_offset()+1][0] as isize
         }
         1 => {
-            let src = _id as *mut u8;
             let ptb = PageTable::from_token(crate::task::current_user_token());
-            let sva = VirtAddr::from(src as usize);
+            let sva = VirtAddr::from(src);
             let vpn = sva.floor();
             match ptb.translate(vpn) {
                 Some(pte) if pte.is_valid() && pte.is_u_mode() && pte.writable() => pte,
                 _ => return -1isize,
             };
-            translated_byte_buffer(
-                crate::task::current_user_token(),
-                src,
-                core::mem::size_of::<u8>(),
-            )[0].copy_from_slice(
+            let ppn = ptb.translate(vpn).unwrap().ppn();
+            ppn.get_bytes_array()[sva.page_offset()..sva.page_offset()+1].copy_from_slice(
                 &[_data as u8][..]
             );
-            // let ppn = ptb.translate(vpn).unwrap().ppn();
-            // ppn.get_bytes_array().copy_from_slice(
-            //     &[_data as u8][..]
-            // );
             0
         }
         2 => {
