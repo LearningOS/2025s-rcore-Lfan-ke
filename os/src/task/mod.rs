@@ -37,15 +37,16 @@ pub struct TaskManager {
     /// total number of tasks
     num_app: usize,
     /// use inner value to get mutable access
-    inner: UPSafeCell<TaskManagerInner>,
+    pub(crate)inner: UPSafeCell<TaskManagerInner>,
 }
 
 /// The task manager inner in 'UPSafeCell'
+pub
 struct TaskManagerInner {
     /// task list
-    tasks: Vec<TaskControlBlock>,
+    pub tasks: Vec<TaskControlBlock>,
     /// id of current `Running` task
-    current_task: usize,
+    pub current_task: usize,
 }
 
 lazy_static! {
@@ -152,6 +153,20 @@ impl TaskManager {
         } else {
             panic!("All applications completed!");
         }
+    }
+
+    /// ...
+    pub fn inc_of_curr_task_syscall(&self, syscall_id: usize) {
+        let mut inner = self.inner.exclusive_access();
+        let curr = inner.current_task;
+        inner.tasks[curr].syscall_times[syscall_id] += 1;
+    }
+
+    /// get syscall time of current task
+    pub fn get_current_task_syscall_time(&self, syscall_id: usize) -> u32 {
+        let inner = self.inner.exclusive_access();
+        let curr = inner.current_task;
+        inner.tasks[curr].syscall_times[syscall_id]
     }
 }
 
